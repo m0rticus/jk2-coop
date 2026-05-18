@@ -76,7 +76,7 @@ static const char *CL_Coop_DifficultyName( int skill )
 	switch ( skill )
 	{
 	case 0:
-		return "Apprentice";
+		return "Padawan";
 	case 2:
 		return "Jedi Knight";
 	case 3:

@@ -220,8 +220,8 @@
 		itemDef
 		{
 			name		diff_apprentice
-			text		"APP"
-			descText	"Apprentice difficulty"
+			text		"PADAWAN"
+			descText	"Padawan difficulty"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
 			rect		145 268 85 24
