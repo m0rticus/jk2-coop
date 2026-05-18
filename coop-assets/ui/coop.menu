@@ -124,7 +124,7 @@
 			cvar		cl_coopLobbySummary
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
-			rect		155 190 330 16
+			rect		155 186 430 16
 			font		2
 			textscale	0.7
 			textalign	ITEM_ALIGN_LEFT
@@ -141,9 +141,60 @@
 			cvar		cl_coopLobbyMembers
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
-			rect		155 208 330 16
+			rect		155 202 430 16
 			font		2
 			textscale	0.7
+			textalign	ITEM_ALIGN_LEFT
+			textalignx	0
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_local_identity
+			cvar		cl_coopLocalIdentity
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 218 430 14
+			font		2
+			textscale	0.5
+			textalign	ITEM_ALIGN_LEFT
+			textalignx	0
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_host_identity
+			cvar		cl_coopHostIdentity
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 234 430 14
+			font		2
+			textscale	0.5
+			textalign	ITEM_ALIGN_LEFT
+			textalignx	0
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_peer_identity
+			cvar		cl_coopPeerIdentity
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 250 430 14
+			font		2
+			textscale	0.5
 			textalign	ITEM_ALIGN_LEFT
 			textalignx	0
 			textaligny	0
@@ -158,7 +209,7 @@
 			text		"DIFFICULTY"
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
-			rect		145 245 350 16
+			rect		145 270 350 16
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -174,7 +225,7 @@
 			name		diff_apprentice_frame
 			group		diff_frames
 			style		WINDOW_STYLE_SHADER
-			rect		145 268 85 24
+			rect		145 293 85 24
 			background	"gfx/menus/menu_buttonback"
 			forecolor	1 1 1 1
 			visible		0
@@ -186,7 +237,7 @@
 			name		diff_jedi_frame
 			group		diff_frames
 			style		WINDOW_STYLE_SHADER
-			rect		235 268 85 24
+			rect		235 293 85 24
 			background	"gfx/menus/menu_buttonback"
 			forecolor	1 1 1 1
 			visible		1
@@ -198,7 +249,7 @@
 			name		diff_knight_frame
 			group		diff_frames
 			style		WINDOW_STYLE_SHADER
-			rect		325 268 85 24
+			rect		325 293 85 24
 			background	"gfx/menus/menu_buttonback"
 			forecolor	1 1 1 1
 			visible		0
@@ -210,7 +261,7 @@
 			name		diff_master_frame
 			group		diff_frames
 			style		WINDOW_STYLE_SHADER
-			rect		415 268 85 24
+			rect		415 293 85 24
 			background	"gfx/menus/menu_buttonback"
 			forecolor	1 1 1 1
 			visible		0
@@ -224,7 +275,7 @@
 			descText	"Padawan difficulty"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		145 268 85 24
+			rect		145 293 85 24
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -250,7 +301,7 @@
 			descText	"Jedi difficulty"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		235 268 85 24
+			rect		235 293 85 24
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -276,7 +327,7 @@
 			descText	"Jedi Knight difficulty"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		325 268 85 24
+			rect		325 293 85 24
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -302,7 +353,7 @@
 			descText	"Jedi Master difficulty"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		415 268 85 24
+			rect		415 293 85 24
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -325,7 +376,7 @@
 		{
 			name		campaign_panel
 			style		WINDOW_STYLE_SHADER
-			rect		145 310 350 68
+			rect		145 335 350 68
 			background	"gfx/menus/menu_box1"
 			forecolor	1 1 1 1
 			visible		1
@@ -338,7 +389,7 @@
 			text		"CAMPAIGN"
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
-			rect		155 318 330 16
+			rect		155 343 330 16
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -355,7 +406,7 @@
 			text		"Start a new campaign or load an existing save."
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
-			rect		155 338 330 16
+			rect		155 363 330 16
 			font		2
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -373,7 +424,7 @@
 			descText	"Open the stock Load Game screen and load the selected save for co-op"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		245 356 150 24
+			rect		245 381 150 24
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
@@ -396,7 +447,7 @@
 			descText	"Invite a friend to the private Steam co-op lobby"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		145 400 150 26
+			rect		145 420 150 26
 			font		3
 			textscale	0.8
 			textalign	ITEM_ALIGN_CENTER
@@ -418,7 +469,7 @@
 			descText	"Start a new campaign with these co-op settings"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		345 400 150 26
+			rect		345 420 150 26
 			font		3
 			textscale	0.8
 			textalign	ITEM_ALIGN_CENTER

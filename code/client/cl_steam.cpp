@@ -34,6 +34,9 @@ static cvar_t *cl_coopSteamAvailable;
 static cvar_t *cl_coopAutoHost;
 static cvar_t *cl_coopLobbySummary;
 static cvar_t *cl_coopLobbyMembers;
+static cvar_t *cl_coopLocalIdentity;
+static cvar_t *cl_coopHostIdentity;
+static cvar_t *cl_coopPeerIdentity;
 static cvar_t *cl_coopDifficultyName;
 
 static const char *CL_Coop_DifficultyName( int skill )
@@ -140,6 +143,8 @@ private:
 	void SetPeer( CSteamID peerId );
 	void ClearRichPresence();
 	void UpdateRichPresence( const char *status );
+	void FormatIdentity( CSteamID steamId, char *buffer, int bufferSize ) const;
+	void UpdateIdentityCvars();
 	void UpdateLobbySummary();
 	void StartListenSocket();
 	void ConnectToLobbyOwner();
@@ -155,6 +160,7 @@ private:
 
 	bool steamReady;
 	bool host;
+	bool joiningLobby;
 	bool connected;
 	int lastPingTime;
 	CSteamID lobby;
@@ -180,6 +186,7 @@ static void CL_Steam_NetConnectionStatusChanged( SteamNetConnectionStatusChanged
 SteamCoopState::SteamCoopState()
 	: steamReady( false ),
 	  host( false ),
+	  joiningLobby( false ),
 	  connected( false ),
 	  lastPingTime( 0 ),
 	  listenSocket( k_HSteamListenSocket_Invalid ),
@@ -256,6 +263,7 @@ void SteamCoopState::Host()
 
 	Leave();
 	host = true;
+	joiningLobby = false;
 	CL_Steam_SetCvar( "cl_coopEnabled", "1" );
 	SetRole( "host" );
 	SetState( "creating-lobby" );
@@ -279,6 +287,7 @@ void SteamCoopState::JoinLobby( uint64 lobbyId )
 
 	Leave();
 	host = false;
+	joiningLobby = true;
 	CL_Steam_SetCvar( "cl_coopEnabled", "1" );
 	SetRole( "client" );
 	SetState( "joining-lobby" );
@@ -313,6 +322,7 @@ void SteamCoopState::Leave()
 	lobby.Clear();
 	peer.Clear();
 	host = false;
+	joiningLobby = false;
 	connected = false;
 	CL_Steam_SetCvar( "cl_coopEnabled", "0" );
 	SetRole( "" );
@@ -391,6 +401,9 @@ void SteamCoopState::PrintStatus() const
 	Com_Printf( "  role: %s\n", cl_coopRole ? cl_coopRole->string : "" );
 	Com_Printf( "  lobby: %s\n", cl_coopLobbyId ? cl_coopLobbyId->string : "" );
 	Com_Printf( "  peer: %s\n", cl_coopPeerSteamId ? cl_coopPeerSteamId->string : "" );
+	Com_Printf( "  local: %s\n", cl_coopLocalIdentity ? cl_coopLocalIdentity->string : "" );
+	Com_Printf( "  host identity: %s\n", cl_coopHostIdentity ? cl_coopHostIdentity->string : "" );
+	Com_Printf( "  peer identity: %s\n", cl_coopPeerIdentity ? cl_coopPeerIdentity->string : "" );
 	Com_Printf( "  auto host: %s\n", cl_coopAutoHost && cl_coopAutoHost->integer ? "enabled" : "disabled" );
 	Com_Printf( "  difficulty: %s\n", cl_coopDifficultyName ? cl_coopDifficultyName->string : "" );
 	Com_Printf( "  p2p: %s\n", connected ? "connected" : "not connected" );
@@ -412,6 +425,12 @@ void SteamCoopState::OnConnectionStatusChanged( SteamNetConnectionStatusChangedC
 	case k_ESteamNetworkingConnectionState_Connecting:
 		if ( host && connection == k_HSteamNetConnection_Invalid )
 		{
+			CSteamID remote = info->m_info.m_identityRemote.GetSteamID();
+			if ( remote.IsValid() )
+			{
+				peer = remote;
+				SetPeer( peer );
+			}
 			EResult result = SteamNetworkingSockets()->AcceptConnection( info->m_hConn );
 			if ( result == k_EResultOK )
 			{
@@ -430,6 +449,14 @@ void SteamCoopState::OnConnectionStatusChanged( SteamNetConnectionStatusChangedC
 	case k_ESteamNetworkingConnectionState_Connected:
 		connection = info->m_hConn;
 		connected = true;
+		{
+			CSteamID remote = info->m_info.m_identityRemote.GetSteamID();
+			if ( remote.IsValid() )
+			{
+				peer = remote;
+				SetPeer( peer );
+			}
+		}
 		SetState( "p2p-connected" );
 		UpdateLobbySummary();
 		if ( host )
@@ -466,21 +493,42 @@ void SteamCoopState::UpdateLobbySummary()
 	{
 		CL_Steam_SetCvar( "cl_coopLobbySummary", "Lobby: Steam unavailable" );
 		CL_Steam_SetCvar( "cl_coopLobbyMembers", "Players: 0/2" );
+		CL_Steam_SetCvar( "cl_coopLocalIdentity", "You: Steam unavailable" );
+		CL_Steam_SetCvar( "cl_coopHostIdentity", "Host: none" );
+		CL_Steam_SetCvar( "cl_coopPeerIdentity", "Peer: none" );
 		return;
 	}
 
 	if ( !lobby.IsValid() )
 	{
-		CL_Steam_SetCvar( "cl_coopLobbySummary", host ? "Lobby: creating private invite-only lobby..." : "Lobby: joining invite..." );
+		UpdateIdentityCvars();
+		if ( host )
+		{
+			CL_Steam_SetCvar( "cl_coopLobbySummary", "Lobby: creating private invite-only lobby..." );
+		}
+		else if ( joiningLobby )
+		{
+			CL_Steam_SetCvar( "cl_coopLobbySummary", "Lobby: joining invite..." );
+		}
+		else
+		{
+			CL_Steam_SetCvar( "cl_coopLobbySummary", "Lobby: Steam ready; creating invite lobby..." );
+		}
 		CL_Steam_SetCvar( "cl_coopLobbyMembers", "Players: 1/2" );
 		return;
 	}
 
 	char members[256] = {0};
 	int memberCount = SteamMatchmaking()->GetNumLobbyMembers( lobby );
+	CSteamID local = SteamUser()->GetSteamID();
+	CSteamID peerCandidate;
 	for ( int i = 0; i < memberCount; ++i )
 	{
 		CSteamID member = SteamMatchmaking()->GetLobbyMemberByIndex( lobby, i );
+		if ( member.IsValid() && member != local && !peerCandidate.IsValid() )
+		{
+			peerCandidate = member;
+		}
 		const char *name = SteamFriends()->GetFriendPersonaName( member );
 		if ( !name || !name[0] )
 		{
@@ -499,6 +547,9 @@ void SteamCoopState::UpdateLobbySummary()
 		memberCount = 1;
 	}
 
+	peer = peerCandidate;
+	SetPeer( peer );
+	UpdateIdentityCvars();
 	CL_Steam_SetCvar( "cl_coopLobbyMembers", va( "Players: %d/2 - %s", memberCount, members ) );
 	CL_Steam_SetCvar(
 		"cl_coopLobbySummary",
@@ -523,6 +574,65 @@ void SteamCoopState::SetLobbyId( CSteamID lobbyId )
 void SteamCoopState::SetPeer( CSteamID peerId )
 {
 	CL_Steam_SetCvar( "cl_coopPeerSteamId", peerId.IsValid() ? va( "%llu", peerId.ConvertToUint64() ) : "" );
+}
+
+void SteamCoopState::FormatIdentity( CSteamID steamId, char *buffer, int bufferSize ) const
+{
+	if ( !buffer || bufferSize <= 0 )
+	{
+		return;
+	}
+	buffer[0] = '\0';
+
+	if ( !steamReady || !steamId.IsValid() )
+	{
+		Q_strncpyz( buffer, "none", bufferSize );
+		return;
+	}
+
+	const char *name = ( steamId == SteamUser()->GetSteamID() ) ? SteamFriends()->GetPersonaName() : SteamFriends()->GetFriendPersonaName( steamId );
+	if ( !name || !name[0] )
+	{
+		name = "Unknown";
+	}
+
+	Com_sprintf( buffer, bufferSize, "%s (%llu)", name, steamId.ConvertToUint64() );
+}
+
+void SteamCoopState::UpdateIdentityCvars()
+{
+	if ( !steamReady )
+	{
+		return;
+	}
+
+	CSteamID local = SteamUser()->GetSteamID();
+	CSteamID hostId = lobby.IsValid() ? SteamMatchmaking()->GetLobbyOwner( lobby ) : ( host ? local : CSteamID() );
+	CSteamID peerId = peer;
+
+	if ( lobby.IsValid() )
+	{
+		for ( int i = 0; i < SteamMatchmaking()->GetNumLobbyMembers( lobby ); ++i )
+		{
+			CSteamID member = SteamMatchmaking()->GetLobbyMemberByIndex( lobby, i );
+			if ( member.IsValid() && member != local )
+			{
+				peerId = member;
+				break;
+			}
+		}
+	}
+
+	char localIdentity[128];
+	char hostIdentity[128];
+	char peerIdentity[128];
+	FormatIdentity( local, localIdentity, sizeof( localIdentity ) );
+	FormatIdentity( hostId, hostIdentity, sizeof( hostIdentity ) );
+	FormatIdentity( peerId, peerIdentity, sizeof( peerIdentity ) );
+
+	CL_Steam_SetCvar( "cl_coopLocalIdentity", va( "You: %s", localIdentity ) );
+	CL_Steam_SetCvar( "cl_coopHostIdentity", va( "Host: %s", hostIdentity ) );
+	CL_Steam_SetCvar( "cl_coopPeerIdentity", peerId.IsValid() ? va( "Peer: %s", peerIdentity ) : "Peer: waiting for invited friend" );
 }
 
 void SteamCoopState::ClearRichPresence()
@@ -809,6 +919,8 @@ void SteamCoopState::OnLobbyCreated( LobbyCreated_t *result, bool ioFailure )
 	SteamMatchmaking()->SetLobbyData( lobby, "state", "lobby" );
 	SteamMatchmaking()->SetLobbyData( lobby, "join_policy", "invite-only" );
 	SteamMatchmaking()->SetLobbyData( lobby, "skill", va( "%d", Cvar_VariableIntegerValue( "g_spskill" ) ) );
+	SteamMatchmaking()->SetLobbyData( lobby, "host_name", SteamFriends()->GetPersonaName() );
+	SteamMatchmaking()->SetLobbyData( lobby, "host_id", va( "%llu", SteamUser()->GetSteamID().ConvertToUint64() ) );
 	UpdateRichPresence( "Hosting invite-only OpenJO co-op" );
 	StartListenSocket();
 	UpdateLobbySummary();
@@ -830,6 +942,7 @@ void SteamCoopState::OnLobbyEnter( LobbyEnter_t *event )
 
 	lobby = CSteamID( event->m_ulSteamIDLobby );
 	SetLobbyId( lobby );
+	joiningLobby = false;
 
 	CSteamID owner = SteamMatchmaking()->GetLobbyOwner( lobby );
 	host = ( owner == SteamUser()->GetSteamID() );
@@ -982,9 +1095,17 @@ void CL_Steam_Init( void )
 	cl_coopPeerSteamId = Cvar_Get( "cl_coopPeerSteamId", "", CVAR_TEMP );
 	cl_coopLastError = Cvar_Get( "cl_coopLastError", "", CVAR_TEMP );
 	cl_coopSteamAvailable = Cvar_Get( "cl_coopSteamAvailable", "0", CVAR_TEMP );
-	cl_coopAutoHost = Cvar_Get( "cl_coopAutoHost", "1", CVAR_ARCHIVE );
+	cl_coopAutoHost = Cvar_Get( "cl_coopAutoHost", "1", CVAR_TEMP );
+	if ( cl_coopAutoHost->integer == 0 && ( cl_coopAutoHost->flags & CVAR_ARCHIVE ) )
+	{
+		Cvar_Set( "cl_coopAutoHost", "1" );
+	}
+	cl_coopAutoHost->flags &= ~CVAR_ARCHIVE;
 	cl_coopLobbySummary = Cvar_Get( "cl_coopLobbySummary", "Lobby: starting Steam co-op...", CVAR_TEMP );
 	cl_coopLobbyMembers = Cvar_Get( "cl_coopLobbyMembers", "Players: 1/2", CVAR_TEMP );
+	cl_coopLocalIdentity = Cvar_Get( "cl_coopLocalIdentity", "You: Steam unavailable", CVAR_TEMP );
+	cl_coopHostIdentity = Cvar_Get( "cl_coopHostIdentity", "Host: none", CVAR_TEMP );
+	cl_coopPeerIdentity = Cvar_Get( "cl_coopPeerIdentity", "Peer: waiting for invited friend", CVAR_TEMP );
 	Cvar_Get( "g_spskill", "1", CVAR_ARCHIVE );
 	cl_coopDifficultyName = Cvar_Get( "cl_coopDifficultyName", CL_Coop_DifficultyName( Cvar_VariableIntegerValue( "g_spskill" ) ), CVAR_TEMP );
 	CL_Coop_SetDifficulty( Cvar_VariableIntegerValue( "g_spskill" ) );
