@@ -108,6 +108,72 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		set(SPEngineLibraries ${SPEngineLibraries} ${SDL2_LIBRARIES})
 	endif()
 
+	if(UseSteamworks)
+		if(NOT WIN32)
+			message(FATAL_ERROR "UseSteamworks is currently only wired for Windows SP builds.")
+		endif()
+		if(NOT SteamworksSDKPath)
+			message(FATAL_ERROR "UseSteamworks enabled, but SteamworksSDKPath is not set.")
+		endif()
+		if(NOT EXISTS "${SteamworksSDKPath}/public/steam/steam_api.h")
+			message(FATAL_ERROR "Steamworks SDK header not found: ${SteamworksSDKPath}/public/steam/steam_api.h")
+		endif()
+
+		if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+			set(SteamworksLibraryNames steam_api)
+			set(SteamworksDllNames steam_api.dll)
+			set(SteamworksLibraryPaths
+				"${SteamworksSDKPath}/redistributable_bin"
+				"${SteamworksSDKPath}/redistributable_bin/win32"
+				"${SteamworksSDKPath}/public/steam/lib/win32"
+				)
+		else()
+			set(SteamworksLibraryNames steam_api64 steam_api)
+			set(SteamworksDllNames steam_api64.dll steam_api.dll)
+			set(SteamworksLibraryPaths
+				"${SteamworksSDKPath}/redistributable_bin/win64"
+				"${SteamworksSDKPath}/redistributable_bin"
+				"${SteamworksSDKPath}/public/steam/lib/win64"
+				)
+		endif()
+
+		find_library(SteamworksSteamAPILibrary
+			NAMES ${SteamworksLibraryNames}
+			PATHS ${SteamworksLibraryPaths}
+			NO_DEFAULT_PATH
+			)
+		find_file(SteamworksSteamAPIDll
+			NAMES ${SteamworksDllNames}
+			PATHS ${SteamworksLibraryPaths}
+			NO_DEFAULT_PATH
+			)
+
+		if(NOT SteamworksSteamAPILibrary)
+			message(FATAL_ERROR "Steamworks import library not found in SteamworksSDKPath: ${SteamworksSDKPath}")
+		endif()
+		if(NOT SteamworksSteamAPIDll)
+			message(FATAL_ERROR "Steamworks runtime DLL not found in SteamworksSDKPath: ${SteamworksSDKPath}")
+		endif()
+
+		set(SPEngineIncludeDirectories
+			${SPEngineIncludeDirectories}
+			"${SteamworksSDKPath}/public"
+			)
+		set(SPEngineLibraries
+			${SPEngineLibraries}
+			${SteamworksSteamAPILibrary}
+			)
+		set(SPEngineDefines
+			${SPEngineDefines}
+			"USE_STEAMWORKS"
+			)
+		if(SteamworksAppId)
+			file(WRITE "${CMAKE_BINARY_DIR}/steam_appid.txt" "${SteamworksAppId}\n")
+			set(SteamworksAppIdFile "${CMAKE_BINARY_DIR}/steam_appid.txt")
+		endif()
+		message(STATUS "Steamworks SDK enabled: ${SteamworksSDKPath}")
+	endif()
+
 	#    Source Files
 
 	# Client files
@@ -124,8 +190,10 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		"${SPDir}/client/cl_mp3.cpp"
 		"${SPDir}/client/cl_parse.cpp"
 		"${SPDir}/client/cl_scrn.cpp"
+		"${SPDir}/client/cl_steam.cpp"
 		"${SPDir}/client/cl_ui.cpp"
 		"${SPDir}/client/cl_mp3.h"
+		"${SPDir}/client/cl_steam.h"
 		"${SPDir}/client/client.h"
 		"${SPDir}/client/client_ui.h"
 
@@ -403,6 +471,12 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 					set(SPEngineExtraInstallFiles
 						${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll
 						)
+				endif()
+			endif()
+			if(UseSteamworks)
+				list(APPEND SPEngineExtraInstallFiles ${SteamworksSteamAPIDll})
+				if(SteamworksAppIdFile)
+					list(APPEND SPEngineExtraInstallFiles ${SteamworksAppIdFile})
 				endif()
 			endif()
 		else(WIN32)

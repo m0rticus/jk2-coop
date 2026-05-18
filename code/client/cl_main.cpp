@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "client_ui.h"
+#include "cl_steam.h"
 #include <limits.h>
 #include "../ghoul2/G2.h"
 #include "qcommon/stringed_ingame.h"
@@ -767,6 +768,8 @@ void CL_Frame ( int msec,float fractionMsec ) {
 		return;
 	}
 
+	CL_Steam_Frame();
+
 	// load the ref / cgame if needed
 	CL_StartHunkUsers();
 
@@ -1316,6 +1319,7 @@ void CL_Init( void ) {
 	Cmd_AddCommand ("uimenu", CL_GenericMenu_f);
 	Cmd_AddCommand ("datapad", CL_DataPad_f);
 	Cmd_AddCommand ("endscreendissolve", CL_EndScreenDissolve_f);
+	CL_Steam_Init();
 
 	CL_InitRef();
 
@@ -1354,6 +1358,7 @@ void CL_Shutdown( void ) {
 
 	CL_ShutdownUI();
 	CL_Disconnect();
+	CL_Steam_Shutdown();
 
 	S_Shutdown();
 	CL_ShutdownRef(qfalse);
@@ -1378,4 +1383,3 @@ void CL_Shutdown( void ) {
 
 	Com_Printf( "-----------------------\n" );
 }
-

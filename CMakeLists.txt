@@ -51,6 +51,10 @@ option(BuildJK2SPEngine "Whether to create projects for the jk2 SP engine (openj
 option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86.dll)" OFF)
 option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (rdjosp-vanilla_x86.dll)" OFF)
 
+option(UseSteamworks "If set, link Steamworks SDK support into the SP engine." OFF)
+set(SteamworksSDKPath "" CACHE PATH "Path to the Steamworks SDK root directory.")
+set(SteamworksAppId "6030" CACHE STRING "Steam AppID written to steam_appid.txt when UseSteamworks is enabled.")
+
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 option(UseAddressSanitizer "Whether to enable runtime address sanitizer" OFF)
 option(UseUndefinedSanitizer "Whether to enable runtime Undefined Behavior sanitizer" OFF)

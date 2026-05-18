@@ -1,0 +1,480 @@
+// Steam co-op setup menu.
+{
+	menuDef
+	{
+		name			"coopMenu"
+		fullScreen		1
+		rect			0 0 640 480
+		visible			1
+		focusColor		1 1 1 1
+		descX			375
+		descY			425
+		descScale		.8
+		descColor		.235 .882 .847 1
+		descAlignment	ITEM_ALIGN_CENTER
+
+		onOpen
+		{
+			setfocus coopinvitebutton
+		}
+
+		onESC
+		{
+			play	"sound/interface/button1.wav" ;
+			close	all ;
+			open	mainMenu
+		}
+
+		itemDef
+		{
+			name		frame_pic
+			group		none
+			style		WINDOW_STYLE_SHADER
+			rect		0 0 640 480
+			background	"gfx/menus/menu1"
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		saberglow
+			group		none
+			style		WINDOW_STYLE_SHADER
+			rect		30 0 90 480
+			background	"gfx/menus/menu3"
+			forecolor	0.8 0.8 0.8 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		starwars
+			group		none
+			style		WINDOW_STYLE_SHADER
+			rect		143 12 470 93
+			background	"gfx/menus/menu4"
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		header_line
+			group		none
+			style		WINDOW_STYLE_SHADER
+			rect		145 145 350 4
+			background	"gfx/menus/menu_line"
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		title
+			text		"CO-OP SETUP"
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		220 112 200 32
+			font		3
+			textscale	1.1
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	100
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_panel
+			style		WINDOW_STYLE_SHADER
+			rect		145 160 350 70
+			background	"gfx/menus/menu_box1"
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_title
+			text		"LOBBY"
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 168 330 16
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_LEFT
+			textalignx	0
+			textaligny	0
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_summary
+			cvar		cl_coopLobbySummary
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 190 330 16
+			font		2
+			textscale	0.7
+			textalign	ITEM_ALIGN_LEFT
+			textalignx	0
+			textaligny	0
+			forecolor	0.235 0.882 0.847 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		lobby_members
+			cvar		cl_coopLobbyMembers
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 208 330 16
+			font		2
+			textscale	0.7
+			textalign	ITEM_ALIGN_LEFT
+			textalignx	0
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		difficulty_title
+			text		"DIFFICULTY"
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		145 245 350 16
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	175
+			textaligny	0
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		diff_apprentice_frame
+			group		diff_frames
+			style		WINDOW_STYLE_SHADER
+			rect		145 268 85 24
+			background	"gfx/menus/menu_buttonback"
+			forecolor	1 1 1 1
+			visible		0
+			decoration
+		}
+
+		itemDef
+		{
+			name		diff_jedi_frame
+			group		diff_frames
+			style		WINDOW_STYLE_SHADER
+			rect		235 268 85 24
+			background	"gfx/menus/menu_buttonback"
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		diff_knight_frame
+			group		diff_frames
+			style		WINDOW_STYLE_SHADER
+			rect		325 268 85 24
+			background	"gfx/menus/menu_buttonback"
+			forecolor	1 1 1 1
+			visible		0
+			decoration
+		}
+
+		itemDef
+		{
+			name		diff_master_frame
+			group		diff_frames
+			style		WINDOW_STYLE_SHADER
+			rect		415 268 85 24
+			background	"gfx/menus/menu_buttonback"
+			forecolor	1 1 1 1
+			visible		0
+			decoration
+		}
+
+		itemDef
+		{
+			name		diff_apprentice
+			text		"APP"
+			descText	"Apprentice difficulty"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		145 268 85 24
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	42
+			textaligny	2
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_difficulty 0" ;
+				show	diff_apprentice_frame ;
+				hide	diff_jedi_frame ;
+				hide	diff_knight_frame ;
+				hide	diff_master_frame
+			}
+		}
+
+		itemDef
+		{
+			name		diff_jedi
+			text		"JEDI"
+			descText	"Jedi difficulty"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		235 268 85 24
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	42
+			textaligny	2
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_difficulty 1" ;
+				hide	diff_apprentice_frame ;
+				show	diff_jedi_frame ;
+				hide	diff_knight_frame ;
+				hide	diff_master_frame
+			}
+		}
+
+		itemDef
+		{
+			name		diff_knight
+			text		"KNIGHT"
+			descText	"Jedi Knight difficulty"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		325 268 85 24
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	42
+			textaligny	2
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_difficulty 2" ;
+				hide	diff_apprentice_frame ;
+				hide	diff_jedi_frame ;
+				show	diff_knight_frame ;
+				hide	diff_master_frame
+			}
+		}
+
+		itemDef
+		{
+			name		diff_master
+			text		"MASTER"
+			descText	"Jedi Master difficulty"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		415 268 85 24
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	42
+			textaligny	2
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_difficulty 3" ;
+				hide	diff_apprentice_frame ;
+				hide	diff_jedi_frame ;
+				hide	diff_knight_frame ;
+				show	diff_master_frame
+			}
+		}
+
+		itemDef
+		{
+			name		level_panel
+			style		WINDOW_STYLE_SHADER
+			rect		145 310 350 68
+			background	"gfx/menus/menu_box1"
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		level_title
+			text		"LEVEL SELECT"
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		155 318 330 16
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	165
+			textaligny	0
+			forecolor	1 1 1 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		selected_level
+			cvar		cl_coopSelectedLevel
+			type		ITEM_TYPE_TEXT
+			style		WINDOW_STYLE_EMPTY
+			rect		220 342 200 16
+			font		3
+			textscale	0.75
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	100
+			textaligny	0
+			forecolor	0.235 0.882 0.847 1
+			visible		1
+			decoration
+		}
+
+		itemDef
+		{
+			name		coopprevlevel
+			text		"PREV"
+			descText	"Select the previous campaign level"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		155 342 60 24
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	30
+			textaligny	2
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_level_prev"
+			}
+		}
+
+		itemDef
+		{
+			name		coopnextlevel
+			text		"NEXT"
+			descText	"Select the next campaign level"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		425 342 60 24
+			font		3
+			textscale	0.7
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	30
+			textaligny	2
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_level_next"
+			}
+		}
+
+		itemDef
+		{
+			name		coopinvitebutton
+			text		"INVITE FRIEND"
+			descText	"Invite a friend to the private Steam co-op lobby"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		145 400 150 26
+			font		3
+			textscale	0.8
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	75
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_invite_friend"
+			}
+		}
+
+		itemDef
+		{
+			name		coopstartbutton
+			text		"START GAME"
+			descText	"Start the selected co-op level with these settings"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		345 400 150 26
+			font		3
+			textscale	0.8
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	75
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				exec	"coop_start_game"
+			}
+		}
+
+		itemDef
+		{
+			name		coopbackbutton
+			text		"BACK"
+			descText	"Return to the main menu"
+			type		ITEM_TYPE_BUTTON
+			style		WINDOW_STYLE_EMPTY
+			rect		245 438 150 26
+			font		3
+			textscale	0.8
+			textalign	ITEM_ALIGN_CENTER
+			textalignx	75
+			textaligny	0
+			forecolor	0.65 0.65 1 1
+			visible		1
+			action
+			{
+				play	"sound/interface/button1.wav" ;
+				close	all ;
+				open	mainMenu
+			}
+		}
+	}
+}
