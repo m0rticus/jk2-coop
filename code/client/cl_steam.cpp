@@ -33,43 +33,7 @@ static cvar_t *cl_coopSteamAvailable;
 static cvar_t *cl_coopAutoHost;
 static cvar_t *cl_coopLobbySummary;
 static cvar_t *cl_coopLobbyMembers;
-static cvar_t *cl_coopSelectedMap;
-static cvar_t *cl_coopSelectedLevel;
 static cvar_t *cl_coopDifficultyName;
-
-struct coopLevelDef_t
-{
-	const char *mapName;
-	const char *displayName;
-};
-
-static const coopLevelDef_t s_coopLevels[] =
-{
-	{ "kejim_post", "Kejim Post" },
-	{ "kejim_base", "Kejim Base" },
-	{ "artus_mine", "Artus Mine" },
-	{ "artus_detention", "Artus Detention" },
-	{ "artus_topside", "Artus Topside" },
-	{ "yavin_temple", "Yavin Temple" },
-	{ "yavin_trial", "Yavin Trial" },
-	{ "ns_streets", "Nar Shaddaa Streets" },
-	{ "ns_hideout", "Nar Shaddaa Hideout" },
-	{ "ns_starpad", "Nar Shaddaa Starpad" },
-	{ "bespin_undercity", "Bespin Undercity" },
-	{ "bespin_streets", "Bespin Streets" },
-	{ "bespin_platform", "Bespin Platform" },
-	{ "cairn_bay", "Cairn Bay" },
-	{ "cairn_assembly", "Cairn Assembly" },
-	{ "cairn_reactor", "Cairn Reactor" },
-	{ "cairn_dock1", "Cairn Dock" },
-	{ "doom_comm", "Doomgiver Communications" },
-	{ "doom_detention", "Doomgiver Detention" },
-	{ "doom_shields", "Doomgiver Shields" },
-	{ "yavin_swamp", "Yavin Swamp" },
-	{ "yavin_canyon", "Yavin Canyon" },
-	{ "yavin_courtyard", "Yavin Courtyard" },
-	{ "yavin_final", "Yavin Final" }
-};
 
 static const char *CL_Coop_DifficultyName( int skill )
 {
@@ -97,49 +61,17 @@ static void CL_Steam_SetError( const char *message )
 	Com_Printf( S_COLOR_YELLOW "Steam co-op: %s\n", message );
 }
 
-static int CL_Coop_FindLevelByMap( const char *mapName )
+static qboolean CL_Coop_IsSafeSaveName( const char *saveName )
 {
-	if ( !mapName || !mapName[0] )
+	if ( !saveName || !saveName[0] )
 	{
-		return -1;
+		return qfalse;
 	}
-
-	for ( int i = 0; i < ARRAY_LEN( s_coopLevels ); ++i )
+	if ( strpbrk( saveName, "\\/:;\"'\n\r" ) )
 	{
-		if ( !Q_stricmp( mapName, s_coopLevels[i].mapName ) )
-		{
-			return i;
-		}
+		return qfalse;
 	}
-
-	return -1;
-}
-
-static void CL_Coop_SetSelectedLevel( int index )
-{
-	const int levelCount = ARRAY_LEN( s_coopLevels );
-	if ( index < 0 )
-	{
-		index = levelCount - 1;
-	}
-	else if ( index >= levelCount )
-	{
-		index = 0;
-	}
-
-	CL_Steam_SetCvar( "cl_coopSelectedMap", s_coopLevels[index].mapName );
-	CL_Steam_SetCvar( "cl_coopSelectedLevel", s_coopLevels[index].displayName );
-}
-
-static int CL_Coop_SelectedLevelIndex()
-{
-	int index = CL_Coop_FindLevelByMap( cl_coopSelectedMap ? cl_coopSelectedMap->string : "" );
-	if ( index < 0 )
-	{
-		index = 0;
-		CL_Coop_SetSelectedLevel( index );
-	}
-	return index;
+	return qtrue;
 }
 
 static void CL_Coop_SetDifficulty( int skill )
@@ -157,19 +89,23 @@ static void CL_Coop_SetDifficulty( int skill )
 	CL_Steam_SetCvar( "cl_coopDifficultyName", CL_Coop_DifficultyName( skill ) );
 }
 
-static void CL_Coop_LaunchSelectedMap( const char *mapName, int skill )
+static void CL_Coop_LaunchNewGame( int skill )
 {
-	int index = CL_Coop_FindLevelByMap( mapName );
-	if ( index < 0 )
+	CL_Coop_SetDifficulty( skill );
+	CL_Steam_SetCvar( "cl_coopEnabled", "1" );
+	Cbuf_ExecuteText( EXEC_APPEND, va( "set cl_coopEnabled 1\nset g_spskill %d\nmap kejim_post\n", skill ) );
+}
+
+static void CL_Coop_LoadSaveGame( const char *saveName )
+{
+	if ( !CL_Coop_IsSafeSaveName( saveName ) )
 	{
-		CL_Steam_SetError( va( "Invalid co-op level '%s'.", mapName ? mapName : "" ) );
+		CL_Steam_SetError( va( "Invalid co-op save name '%s'.", saveName ? saveName : "" ) );
 		return;
 	}
 
-	CL_Coop_SetDifficulty( skill );
-	CL_Coop_SetSelectedLevel( index );
 	CL_Steam_SetCvar( "cl_coopEnabled", "1" );
-	Cbuf_ExecuteText( EXEC_APPEND, va( "set cl_coopEnabled 1\nset g_spskill %d\nmap %s\n", skill, s_coopLevels[index].mapName ) );
+	Cbuf_ExecuteText( EXEC_APPEND, va( "set cl_coopEnabled 1\nload %s\n", saveName ) );
 }
 
 #ifdef USE_STEAMWORKS
@@ -191,6 +127,7 @@ public:
 	void InviteFriend();
 	void Leave();
 	void StartGame();
+	void StartSave( const char *saveName );
 	void PrintStatus() const;
 	void OnConnectionStatusChanged( SteamNetConnectionStatusChangedCallback_t *info );
 
@@ -402,18 +339,46 @@ void SteamCoopState::StartGame()
 		return;
 	}
 
-	int skill = Cvar_VariableIntegerValue( "g_spskill" );
-	int index = CL_Coop_SelectedLevelIndex();
-	const char *mapName = s_coopLevels[index].mapName;
+	SteamMatchmaking()->SetLobbyData( lobby, "state", "starting" );
+	SteamMatchmaking()->SetLobbyData( lobby, "start_mode", "new_game" );
+	SteamMatchmaking()->SetLobbyData( lobby, "skill", va( "%d", Cvar_VariableIntegerValue( "g_spskill" ) ) );
+	SetState( "starting-game" );
+	UpdateRichPresence( "Starting new OpenJO co-op game" );
+	SendPacket( va( "START_NEW_GAME %d", Cvar_VariableIntegerValue( "g_spskill" ) ) );
+	Com_Printf( "Steam co-op: starting new game on %s difficulty\n", CL_Coop_DifficultyName( Cvar_VariableIntegerValue( "g_spskill" ) ) );
+	CL_Coop_LaunchNewGame( Cvar_VariableIntegerValue( "g_spskill" ) );
+}
+
+void SteamCoopState::StartSave( const char *saveName )
+{
+	if ( !steamReady )
+	{
+		CL_Steam_SetError( "Steam is not available; cannot load a co-op save." );
+		return;
+	}
+	if ( !host )
+	{
+		CL_Steam_SetError( "Only the lobby host can load a co-op save." );
+		return;
+	}
+	if ( !lobby.IsValid() )
+	{
+		CL_Steam_SetError( "Steam co-op lobby is not ready yet; try again in a moment." );
+		return;
+	}
+	if ( !CL_Coop_IsSafeSaveName( saveName ) )
+	{
+		CL_Steam_SetError( va( "Invalid co-op save name '%s'.", saveName ? saveName : "" ) );
+		return;
+	}
 
 	SteamMatchmaking()->SetLobbyData( lobby, "state", "starting" );
-	SteamMatchmaking()->SetLobbyData( lobby, "map", mapName );
-	SteamMatchmaking()->SetLobbyData( lobby, "skill", va( "%d", skill ) );
-	SetState( "starting-game" );
-	UpdateRichPresence( va( "Starting %s co-op", s_coopLevels[index].displayName ) );
-	SendPacket( va( "START_MAP %s %d", mapName, skill ) );
-	Com_Printf( "Steam co-op: starting %s on %s difficulty\n", s_coopLevels[index].displayName, CL_Coop_DifficultyName( skill ) );
-	CL_Coop_LaunchSelectedMap( mapName, skill );
+	SteamMatchmaking()->SetLobbyData( lobby, "start_mode", "save_game" );
+	SetState( "starting-save" );
+	UpdateRichPresence( "Loading OpenJO co-op save" );
+	SendPacket( va( "START_SAVE %s", saveName ) );
+	Com_Printf( "Steam co-op: loading save %s\n", saveName );
+	CL_Coop_LoadSaveGame( saveName );
 }
 
 void SteamCoopState::PrintStatus() const
@@ -425,7 +390,6 @@ void SteamCoopState::PrintStatus() const
 	Com_Printf( "  lobby: %s\n", cl_coopLobbyId ? cl_coopLobbyId->string : "" );
 	Com_Printf( "  peer: %s\n", cl_coopPeerSteamId ? cl_coopPeerSteamId->string : "" );
 	Com_Printf( "  auto host: %s\n", cl_coopAutoHost && cl_coopAutoHost->integer ? "enabled" : "disabled" );
-	Com_Printf( "  level: %s (%s)\n", cl_coopSelectedLevel ? cl_coopSelectedLevel->string : "", cl_coopSelectedMap ? cl_coopSelectedMap->string : "" );
 	Com_Printf( "  difficulty: %s\n", cl_coopDifficultyName ? cl_coopDifficultyName->string : "" );
 	Com_Printf( "  p2p: %s\n", connected ? "connected" : "not connected" );
 	if ( cl_coopLastError && cl_coopLastError->string[0] )
@@ -715,17 +679,27 @@ void SteamCoopState::HandlePacket( const char *packet )
 	{
 		Com_DPrintf( "Steam co-op: received PONG\n" );
 	}
-	else if ( !Q_stricmpn( packet, "START_MAP ", 10 ) )
+	else if ( !Q_stricmpn( packet, "START_NEW_GAME ", 15 ) )
 	{
-		char mapName[MAX_QPATH] = {0};
 		int skill = 1;
-		if ( sscanf( packet + 10, "%63s %d", mapName, &skill ) != 2 )
+		if ( sscanf( packet + 15, "%d", &skill ) != 1 )
 		{
-			CL_Steam_SetError( "Received malformed START_MAP packet." );
+			CL_Steam_SetError( "Received malformed START_NEW_GAME packet." );
 			return;
 		}
-		Com_Printf( "Steam co-op: received START_MAP %s %d\n", mapName, skill );
-		CL_Coop_LaunchSelectedMap( mapName, skill );
+		Com_Printf( "Steam co-op: received START_NEW_GAME %d\n", skill );
+		CL_Coop_LaunchNewGame( skill );
+	}
+	else if ( !Q_stricmpn( packet, "START_SAVE ", 11 ) )
+	{
+		char saveName[MAX_QPATH] = {0};
+		if ( sscanf( packet + 11, "%63s", saveName ) != 1 )
+		{
+			CL_Steam_SetError( "Received malformed START_SAVE packet." );
+			return;
+		}
+		Com_Printf( "Steam co-op: received START_SAVE %s\n", saveName );
+		CL_Coop_LoadSaveGame( saveName );
 	}
 	else
 	{
@@ -763,7 +737,6 @@ void SteamCoopState::OnLobbyCreated( LobbyCreated_t *result, bool ioFailure )
 	SteamMatchmaking()->SetLobbyData( lobby, "version", "1" );
 	SteamMatchmaking()->SetLobbyData( lobby, "state", "lobby" );
 	SteamMatchmaking()->SetLobbyData( lobby, "join_policy", "invite-only" );
-	SteamMatchmaking()->SetLobbyData( lobby, "map", cl_coopSelectedMap ? cl_coopSelectedMap->string : s_coopLevels[0].mapName );
 	SteamMatchmaking()->SetLobbyData( lobby, "skill", va( "%d", Cvar_VariableIntegerValue( "g_spskill" ) ) );
 	UpdateRichPresence( "Hosting invite-only OpenJO co-op" );
 	StartListenSocket();
@@ -871,22 +844,29 @@ static void CL_Coop_Difficulty_f( void )
 	CL_Coop_SetDifficulty( atoi( Cmd_Argv( 1 ) ) );
 }
 
-static void CL_Coop_LevelNext_f( void )
-{
-	CL_Coop_SetSelectedLevel( CL_Coop_SelectedLevelIndex() + 1 );
-}
-
-static void CL_Coop_LevelPrev_f( void )
-{
-	CL_Coop_SetSelectedLevel( CL_Coop_SelectedLevelIndex() - 1 );
-}
-
 static void CL_Coop_StartGame_f( void )
 {
 #ifdef USE_STEAMWORKS
 	if ( s_steamCoop )
 	{
 		s_steamCoop->StartGame();
+	}
+#else
+	CL_Steam_SetError( "This OpenJK build was not compiled with Steamworks support." );
+#endif
+}
+
+static void CL_Coop_StartSave_f( void )
+{
+	if ( Cmd_Argc() < 2 )
+	{
+		CL_Steam_SetError( "Usage: coop_start_save <save name>" );
+		return;
+	}
+#ifdef USE_STEAMWORKS
+	if ( s_steamCoop )
+	{
+		s_steamCoop->StartSave( Cmd_Argv( 1 ) );
 	}
 #else
 	CL_Steam_SetError( "This OpenJK build was not compiled with Steamworks support." );
@@ -934,19 +914,15 @@ void CL_Steam_Init( void )
 	cl_coopAutoHost = Cvar_Get( "cl_coopAutoHost", "1", CVAR_ARCHIVE );
 	cl_coopLobbySummary = Cvar_Get( "cl_coopLobbySummary", "Lobby: starting Steam co-op...", CVAR_TEMP );
 	cl_coopLobbyMembers = Cvar_Get( "cl_coopLobbyMembers", "Players: 1/2", CVAR_TEMP );
-	cl_coopSelectedMap = Cvar_Get( "cl_coopSelectedMap", s_coopLevels[0].mapName, CVAR_ARCHIVE );
-	cl_coopSelectedLevel = Cvar_Get( "cl_coopSelectedLevel", s_coopLevels[0].displayName, CVAR_TEMP );
 	Cvar_Get( "g_spskill", "1", CVAR_ARCHIVE );
 	cl_coopDifficultyName = Cvar_Get( "cl_coopDifficultyName", CL_Coop_DifficultyName( Cvar_VariableIntegerValue( "g_spskill" ) ), CVAR_TEMP );
-	CL_Coop_SetSelectedLevel( CL_Coop_SelectedLevelIndex() );
 	CL_Coop_SetDifficulty( Cvar_VariableIntegerValue( "g_spskill" ) );
 
 	Cmd_AddCommand( "coop_host", CL_Steam_Host_f );
 	Cmd_AddCommand( "coop_invite_friend", CL_Steam_InviteFriend_f );
 	Cmd_AddCommand( "coop_difficulty", CL_Coop_Difficulty_f );
-	Cmd_AddCommand( "coop_level_next", CL_Coop_LevelNext_f );
-	Cmd_AddCommand( "coop_level_prev", CL_Coop_LevelPrev_f );
 	Cmd_AddCommand( "coop_start_game", CL_Coop_StartGame_f );
+	Cmd_AddCommand( "coop_start_save", CL_Coop_StartSave_f );
 	Cmd_AddCommand( "coop_leave", CL_Steam_Leave_f );
 	Cmd_AddCommand( "coop_status", CL_Steam_Status_f );
 
@@ -981,9 +957,8 @@ void CL_Steam_Shutdown( void )
 	Cmd_RemoveCommand( "coop_host" );
 	Cmd_RemoveCommand( "coop_invite_friend" );
 	Cmd_RemoveCommand( "coop_difficulty" );
-	Cmd_RemoveCommand( "coop_level_next" );
-	Cmd_RemoveCommand( "coop_level_prev" );
 	Cmd_RemoveCommand( "coop_start_game" );
+	Cmd_RemoveCommand( "coop_start_save" );
 	Cmd_RemoveCommand( "coop_leave" );
 	Cmd_RemoveCommand( "coop_status" );
 }

@@ -323,7 +323,7 @@
 
 		itemDef
 		{
-			name		level_panel
+			name		campaign_panel
 			style		WINDOW_STYLE_SHADER
 			rect		145 310 350 68
 			background	"gfx/menus/menu_box1"
@@ -334,8 +334,8 @@
 
 		itemDef
 		{
-			name		level_title
-			text		"LEVEL SELECT"
+			name		campaign_title
+			text		"CAMPAIGN"
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
 			rect		155 318 330 16
@@ -351,15 +351,15 @@
 
 		itemDef
 		{
-			name		selected_level
-			cvar		cl_coopSelectedLevel
+			name		campaign_hint
+			text		"Start a new campaign or load an existing save."
 			type		ITEM_TYPE_TEXT
 			style		WINDOW_STYLE_EMPTY
-			rect		220 342 200 16
-			font		3
-			textscale	0.75
+			rect		155 338 330 16
+			font		2
+			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
-			textalignx	100
+			textalignx	165
 			textaligny	0
 			forecolor	0.235 0.882 0.847 1
 			visible		1
@@ -368,45 +368,24 @@
 
 		itemDef
 		{
-			name		coopprevlevel
-			text		"PREV"
-			descText	"Select the previous campaign level"
+			name		cooploadsave
+			text		"LOAD SAVE"
+			descText	"Open the stock Load Game screen and load the selected save for co-op"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
-			rect		155 342 60 24
+			rect		245 356 150 24
 			font		3
 			textscale	0.7
 			textalign	ITEM_ALIGN_CENTER
-			textalignx	30
+			textalignx	75
 			textaligny	2
 			forecolor	0.65 0.65 1 1
 			visible		1
 			action
 			{
 				play	"sound/interface/button1.wav" ;
-				exec	"coop_level_prev"
-			}
-		}
-
-		itemDef
-		{
-			name		coopnextlevel
-			text		"NEXT"
-			descText	"Select the next campaign level"
-			type		ITEM_TYPE_BUTTON
-			style		WINDOW_STYLE_EMPTY
-			rect		425 342 60 24
-			font		3
-			textscale	0.7
-			textalign	ITEM_ALIGN_CENTER
-			textalignx	30
-			textaligny	2
-			forecolor	0.65 0.65 1 1
-			visible		1
-			action
-			{
-				play	"sound/interface/button1.wav" ;
-				exec	"coop_level_next"
+				close	all ;
+				open	loadgameMenu
 			}
 		}
 
@@ -435,8 +414,8 @@
 		itemDef
 		{
 			name		coopstartbutton
-			text		"START GAME"
-			descText	"Start the selected co-op level with these settings"
+			text		"START NEW GAME"
+			descText	"Start a new campaign with these co-op settings"
 			type		ITEM_TYPE_BUTTON
 			style		WINDOW_STYLE_EMPTY
 			rect		345 400 150 26

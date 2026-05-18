@@ -929,7 +929,14 @@ static qboolean UI_RunMenuScript ( const char **args )
 			if (s_savedata[s_savegame.currentLine].currentSaveFileName)// && (*s_file_desc_field.field.buffer))
 			{
 				Menus_CloseAll();
-				ui.Cmd_ExecuteText( EXEC_APPEND, va("load %s\n", s_savedata[s_savegame.currentLine].currentSaveFileName));
+				if ( Cvar_VariableIntegerValue( "cl_coopEnabled" ) && Cvar_VariableIntegerValue( "cl_coopSteamAvailable" ) )
+				{
+					ui.Cmd_ExecuteText( EXEC_APPEND, va("coop_start_save %s\n", s_savedata[s_savegame.currentLine].currentSaveFileName));
+				}
+				else
+				{
+					ui.Cmd_ExecuteText( EXEC_APPEND, va("load %s\n", s_savedata[s_savegame.currentLine].currentSaveFileName));
+				}
 			}
 			// after loading a game, the list box (and it's highlight) get's reset back to 0, but currentLine sticks around, so set it to 0 here
 			s_savegame.currentLine = 0;
