@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_headers.h"
 
 #include "g_local.h"
+#include "g_coop.h"
 #include "g_functions.h"
 #include "Q3_Interface.h"
 #include "g_nav.h"
@@ -626,6 +627,7 @@ void InitGame(  const char *mapname, const char *spawntarget, int checkSum, cons
 	srand( randomSeed );
 
 	G_InitCvars();
+	G_Coop_Init();
 
 	G_InitMemory();
 
@@ -651,12 +653,15 @@ void InitGame(  const char *mapname, const char *spawntarget, int checkSum, cons
 	globals.gentities = g_entities;
 	ClearAllInUse();
 	// initialize all clients for this game
-	level.maxclients = 1;
+	level.maxclients = G_Coop_MaxClients();
 	level.clients = (gclient_t *) G_Alloc( level.maxclients * sizeof(level.clients[0]) );
 	memset(level.clients, 0, level.maxclients * sizeof(level.clients[0]));
 
-	// set client fields on player
-	g_entities[0].client = level.clients;
+	// set client fields on players
+	for ( int i = 0; i < level.maxclients; i++ )
+	{
+		g_entities[i].client = level.clients + i;
+	}
 
 	// always leave room for the max number of clients,
 	// even if they aren't all used, so numbers inside that
@@ -1266,6 +1271,8 @@ void G_RunFrame( int levelTime ) {
 	level.time = levelTime;
 	//msec = level.time - level.previousTime;
 
+	G_Coop_RunFrame();
+
 	NAV_CheckCalcPaths();
 	//ResetTeamCounters();
 
@@ -1382,42 +1389,45 @@ void G_RunFrame( int levelTime ) {
 			continue;
 		}
 
-		//The player
-		if ( i == 0 )
+		// Players are ucmd driven.
+		if ( i < level.maxclients && ent->client )
 		{
-			// decay batteries if the goggles are active
-			if ( cg.zoomMode == 1 && ent->client->ps.batteryCharge > 0 )
+			if ( i == 0 )
 			{
-				ent->client->ps.batteryCharge--;
-			}
-			else if ( cg.zoomMode == 3 && ent->client->ps.batteryCharge > 0 )
-			{
-				ent->client->ps.batteryCharge -= 2;
-
-				if ( ent->client->ps.batteryCharge < 0 )
+				// decay batteries if the goggles are active
+				if ( cg.zoomMode == 1 && ent->client->ps.batteryCharge > 0 )
 				{
-					ent->client->ps.batteryCharge = 0;
+					ent->client->ps.batteryCharge--;
+				}
+				else if ( cg.zoomMode == 3 && ent->client->ps.batteryCharge > 0 )
+				{
+					ent->client->ps.batteryCharge -= 2;
+
+					if ( ent->client->ps.batteryCharge < 0 )
+					{
+						ent->client->ps.batteryCharge = 0;
+					}
+				}
+
+				G_CheckEndLevelTimers( ent );
+				//Recalculate the nearest waypoint for the coming NPC updates
+				NAV_FindPlayerWaypoint();
+
+				if( ent->taskManager && !stop_icarus )
+				{
+					ent->taskManager->Update();
+				}
+				//dead
+				if ( ent->health <= 0 )
+				{
+					if ( ent->client->ps.groundEntityNum != ENTITYNUM_NONE )
+					{//on the ground
+						pitch_roll_for_slope( ent, NULL );
+					}
 				}
 			}
 
-			G_CheckEndLevelTimers( ent );
-			//Recalculate the nearest waypoint for the coming NPC updates
-			NAV_FindPlayerWaypoint();
-
-			if( ent->taskManager && !stop_icarus )
-			{
-				ent->taskManager->Update();
-			}
-			//dead
-			if ( ent->health <= 0 )
-			{
-				if ( ent->client->ps.groundEntityNum != ENTITYNUM_NONE )
-				{//on the ground
-					pitch_roll_for_slope( ent, NULL );
-				}
-			}
-
-			continue;	// players are ucmd driven
+			continue;
 		}
 
 		G_RunThink( ent );	// be aware that ent may be free after returning from here, at least one func frees them
@@ -1425,11 +1435,14 @@ void G_RunFrame( int levelTime ) {
 		//UpdateTeamCounters( ent );	//	   to call anyway on a freed ent.
 	}
 
-	// perform final fixups on the player
-	ent = &g_entities[0];
-	if ( ent->inuse )
+	// perform final fixups on the players
+	for ( i = 0; i < level.maxclients; i++ )
 	{
-		ClientEndFrame( ent );
+		ent = &g_entities[i];
+		if ( ent->inuse )
+		{
+			ClientEndFrame( ent );
+		}
 	}
 	if( g_numEntities->integer )
 	{

@@ -159,6 +159,9 @@ extern	server_t		sv;					// cleared each map
 
 extern	game_export_t	*ge;
 
+int SV_ClientLimit( void );
+void SV_Coop_ApplyRemoteUsercmd( const usercmd_t *cmd );
+
 extern	cvar_t	*sv_fps;
 extern	cvar_t	*sv_timeout;
 extern	cvar_t	*sv_zombietime;

@@ -12,9 +12,9 @@ published by the Free Software Foundation.
 
 #pragma once
 
-#include "../qcommon/q_shared.h"
-
-void CL_Steam_Init( void );
-void CL_Steam_Frame( void );
-void CL_Steam_Shutdown( void );
-void CL_Steam_SendUsercmd( int sequence, const usercmd_t *cmd );
+void G_Coop_Init( void );
+void G_Coop_RunFrame( void );
+qboolean G_Coop_IsEnabled( void );
+int G_Coop_MaxClients( void );
+qboolean G_Coop_IsPeerClient( int clientNum );
+void G_Coop_AdjustPeerSpawn( gentity_t *ent, vec3_t spawnOrigin );

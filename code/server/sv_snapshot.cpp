@@ -706,7 +706,7 @@ void SV_SendClientMessages( void ) {
 	client_t	*c;
 
 	// send a message to each connected client
-	for (i=0, c = svs.clients ; i < 1 ; i++, c++) {
+	for (i=0, c = svs.clients ; i < SV_ClientLimit() ; i++, c++) {
 		if (!c->state) {
 			continue;		// not connected
 		}
@@ -721,4 +721,3 @@ void SV_SendClientMessages( void ) {
 		SV_SendClientSnapshot( c );
 	}
 }
-

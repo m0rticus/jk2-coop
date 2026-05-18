@@ -14,6 +14,7 @@ published by the Free Software Foundation.
 
 #include "cl_steam.h"
 #include "client.h"
+#include "../server/server.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -129,6 +130,7 @@ public:
 	void StartGame();
 	void StartSave( const char *saveName );
 	void PrintStatus() const;
+	void SendUsercmd( int sequence, const usercmd_t *cmd );
 	void OnConnectionStatusChanged( SteamNetConnectionStatusChangedCallback_t *info );
 
 private:
@@ -142,7 +144,7 @@ private:
 	void StartListenSocket();
 	void ConnectToLobbyOwner();
 	void CloseNetworking();
-	void SendPacket( const char *packet );
+	void SendPacket( const char *packet, bool reliable = true );
 	void ReceivePackets();
 	void HandlePacket( const char *packet );
 	void SendPingIfNeeded();
@@ -616,7 +618,7 @@ void SteamCoopState::CloseNetworking()
 	lastPingTime = 0;
 }
 
-void SteamCoopState::SendPacket( const char *packet )
+void SteamCoopState::SendPacket( const char *packet, bool reliable )
 {
 	if ( !connected || connection == k_HSteamNetConnection_Invalid || !packet )
 	{
@@ -627,12 +629,36 @@ void SteamCoopState::SendPacket( const char *packet )
 		connection,
 		packet,
 		static_cast<uint32>( strlen( packet ) + 1 ),
-		k_nSteamNetworkingSend_Reliable,
+		reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_UnreliableNoDelay,
 		NULL );
 	if ( result != k_EResultOK )
 	{
 		CL_Steam_SetError( va( "Failed to send Steam P2P packet: %d", result ) );
 	}
+}
+
+void SteamCoopState::SendUsercmd( int sequence, const usercmd_t *cmd )
+{
+	if ( !cmd || !connected )
+	{
+		return;
+	}
+
+	SendPacket(
+		va(
+			"USERCMD %d %d %d %d %d %d %d %d %d %d %d",
+			sequence,
+			cmd->serverTime,
+			cmd->angles[0],
+			cmd->angles[1],
+			cmd->angles[2],
+			cmd->forwardmove,
+			cmd->rightmove,
+			cmd->upmove,
+			cmd->buttons,
+			cmd->weapon,
+			cmd->generic_cmd ),
+		false );
 }
 
 void SteamCoopState::ReceivePackets()
@@ -700,6 +726,51 @@ void SteamCoopState::HandlePacket( const char *packet )
 		}
 		Com_Printf( "Steam co-op: received START_SAVE %s\n", saveName );
 		CL_Coop_LoadSaveGame( saveName );
+	}
+	else if ( !Q_stricmpn( packet, "USERCMD ", 8 ) )
+	{
+		int sequence = 0;
+		int serverTime = 0;
+		int angles[3] = {0, 0, 0};
+		int forwardmove = 0;
+		int rightmove = 0;
+		int upmove = 0;
+		int buttons = 0;
+		int weapon = 0;
+		int genericCmd = 0;
+		if ( sscanf(
+				packet + 8,
+				"%d %d %d %d %d %d %d %d %d %d %d",
+				&sequence,
+				&serverTime,
+				&angles[0],
+				&angles[1],
+				&angles[2],
+				&forwardmove,
+				&rightmove,
+				&upmove,
+				&buttons,
+				&weapon,
+				&genericCmd ) != 11 )
+		{
+			CL_Steam_SetError( "Received malformed USERCMD packet." );
+			return;
+		}
+
+		(void)sequence;
+		usercmd_t cmd;
+		memset( &cmd, 0, sizeof( cmd ) );
+		cmd.serverTime = serverTime;
+		cmd.angles[0] = angles[0];
+		cmd.angles[1] = angles[1];
+		cmd.angles[2] = angles[2];
+		cmd.forwardmove = ClampChar( forwardmove );
+		cmd.rightmove = ClampChar( rightmove );
+		cmd.upmove = ClampChar( upmove );
+		cmd.buttons = buttons;
+		cmd.weapon = static_cast<byte>( Com_Clampi( 0, 255, weapon ) );
+		cmd.generic_cmd = static_cast<byte>( Com_Clampi( 0, 255, genericCmd ) );
+		SV_Coop_ApplyRemoteUsercmd( &cmd );
 	}
 	else
 	{
@@ -961,4 +1032,14 @@ void CL_Steam_Shutdown( void )
 	Cmd_RemoveCommand( "coop_start_save" );
 	Cmd_RemoveCommand( "coop_leave" );
 	Cmd_RemoveCommand( "coop_status" );
+}
+
+void CL_Steam_SendUsercmd( int sequence, const usercmd_t *cmd )
+{
+#ifdef USE_STEAMWORKS
+	if ( s_steamCoop )
+	{
+		s_steamCoop->SendUsercmd( sequence, cmd );
+	}
+#endif
 }

@@ -38,6 +38,11 @@ CMiniHeap *G2VertSpaceServer = NULL;
 Ghoul2 Insert End
 */
 
+int SV_ClientLimit( void )
+{
+	return Cvar_VariableIntegerValue( "cl_coopEnabled" ) ? MAX_CLIENTS : 1;
+}
+
 
 /*
 ===============
@@ -101,7 +106,7 @@ SV_SetUserinfo
 ===============
 */
 void SV_SetUserinfo( int index, const char *val ) {
-	if ( index < 0 || index >= 1 ) {
+	if ( index < 0 || index >= SV_ClientLimit() ) {
 		Com_Error (ERR_DROP, "SV_SetUserinfo: bad index %i\n", index);
 	}
 
@@ -124,7 +129,7 @@ void SV_GetUserinfo( int index, char *buffer, int bufferSize ) {
 	if ( bufferSize < 1 ) {
 		Com_Error( ERR_DROP, "SV_GetUserinfo: bufferSize == %i", bufferSize );
 	}
-	if ( index < 0 || index >= 1 ) {
+	if ( index < 0 || index >= SV_ClientLimit() ) {
 		Com_Error (ERR_DROP, "SV_GetUserinfo: bad index %i\n", index);
 	}
 	Q_strncpyz( buffer, svs.clients[ index ].userinfo, bufferSize );
@@ -176,8 +181,8 @@ void SV_Startup( void ) {
 		Com_Error( ERR_FATAL, "SV_Startup: svs.initialized" );
 	}
 
-	svs.clients = (struct client_s *) Z_Malloc ( sizeof(client_t) * 1, TAG_CLIENTS, qtrue );
-	svs.numSnapshotEntities = 2 * 4 * 64;
+	svs.clients = (struct client_s *) Z_Malloc ( sizeof(client_t) * MAX_CLIENTS, TAG_CLIENTS, qtrue );
+	svs.numSnapshotEntities = MAX_CLIENTS * 4 * 64;
 	svs.initialized = qtrue;
 
 	Cvar_Set( "sv_running", "1" );
@@ -323,7 +328,7 @@ void SV_SpawnServer( const char *server, ForceReload_e eForceReload, qboolean bA
 	// create a baseline for more efficient communications
 	SV_CreateBaseline ();
 
-	for (i=0 ; i<1 ; i++) {
+	for (i=0 ; i<SV_ClientLimit() ; i++) {
 		// clear all time counters, because we have reset sv.time
 		svs.clients[i].lastPacketTime = 0;
 		svs.clients[i].lastConnectTime = 0;
@@ -481,7 +486,10 @@ void SV_Shutdown( const char *finalmsg ) {
 
 	// free server static data
 	if ( svs.clients ) {
-		SV_FreeClient(svs.clients);
+		for ( i = 0; i < MAX_CLIENTS; i++ )
+		{
+			SV_FreeClient( &svs.clients[i] );
+		}
 		Z_Free( svs.clients );
 	}
 	memset( &svs, 0, sizeof( svs ) );
@@ -493,4 +501,3 @@ void SV_Shutdown( const char *finalmsg ) {
 
 	//Com_Printf( "---------------------------\n" );
 }
-

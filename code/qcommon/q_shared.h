@@ -615,7 +615,7 @@ typedef struct {
 //
 // per-level limits
 //
-#define	MAX_CLIENTS			1 // 128		// absolute limit
+#define	MAX_CLIENTS			2 // 128		// absolute limit
 #define MAX_TERRAINS		1 //32
 
 #define	GENTITYNUM_BITS		10		// don't need to send any more

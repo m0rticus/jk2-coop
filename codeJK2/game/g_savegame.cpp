@@ -994,7 +994,10 @@ void WriteLevel(qboolean qbAutosave)
 	{
 		// write out one client - us!
 		//
-		assert(level.maxclients == 1);	// I'll need to know if this changes, otherwise I'll need to change the way ReadGame works
+		if ( level.maxclients != 1 )
+		{
+			gi.Printf( S_COLOR_YELLOW "Co-op: saving only client 0 until co-op save chunks are implemented.\n" );
+		}
 		gclient_t client = level.clients[0];
 		EnumerateFields(savefields_gClient, &client, INT_ID('G','C','L','I'));
 		WriteLevelLocals();	// level_locals_t level
@@ -1056,7 +1059,10 @@ void ReadLevel(qboolean qbAutosave, qboolean qbLoadTransition)
 	{
 		if (!qbAutosave )//always load the client unless it's an autosave
 		{
-			assert(level.maxclients == 1);	// I'll need to know if this changes, otherwise I'll need to change the way things work
+			if ( level.maxclients != 1 )
+			{
+				gi.Printf( S_COLOR_YELLOW "Co-op: loading client 0 from single-player save data.\n" );
+			}
 
 			gclient_t GClient;
 			EvaluateFields(savefields_gClient, &GClient, &level.clients[0], INT_ID('G','C','L','I'));

@@ -104,7 +104,7 @@ void SV_GameSendServerCommand( int clientNum, const char *fmt, ... ) {
 	if ( clientNum == -1 ) {
 		SV_SendServerCommand( NULL, "%s", msg );
 	} else {
-		if ( clientNum < 0 || clientNum >= 1 ) {
+		if ( clientNum < 0 || clientNum >= SV_ClientLimit() ) {
 			return;
 		}
 		SV_SendServerCommand( svs.clients + clientNum, "%s", msg );
@@ -120,7 +120,7 @@ Disconnects the client with a message
 ===============
 */
 void SV_GameDropClient( int clientNum, const char *reason ) {
-	if ( clientNum < 0 || clientNum >= 1 ) {
+	if ( clientNum < 0 || clientNum >= SV_ClientLimit() ) {
 		return;
 	}
 	SV_DropClient( svs.clients + clientNum, reason );
@@ -1109,4 +1109,3 @@ qboolean SV_GameCommand( void ) {
 
 	return ge->ConsoleCommand();
 }
-

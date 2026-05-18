@@ -74,7 +74,7 @@ void SV_DirectConnect( netadr_t from ) {
 	memset (newcl, 0, sizeof(client_t));
 
 	// if there is already a slot for this ip, reuse it
-	for (i=0,cl=svs.clients ; i < 1 ; i++,cl++)
+	for (i=0,cl=svs.clients ; i < SV_ClientLimit() ; i++,cl++)
 	{
 		if ( cl->state == CS_FREE ) {
 			continue;
@@ -97,7 +97,7 @@ void SV_DirectConnect( netadr_t from ) {
 
 
 	newcl = NULL;
-	for ( i = 0; i < 1 ; i++ ) {
+	for ( i = 0; i < SV_ClientLimit() ; i++ ) {
 		cl = &svs.clients[i];
 		if (cl->state == CS_FREE) {
 			newcl = cl;
@@ -399,6 +399,25 @@ void SV_ClientThink (client_t *cl, usercmd_t *cmd) {
 	ge->ClientThink( cl - svs.clients, cmd );
 }
 
+void SV_Coop_ApplyRemoteUsercmd( const usercmd_t *cmd )
+{
+	if ( !cmd || !ge || sv.state != SS_GAME || !Cvar_VariableIntegerValue( "cl_coopEnabled" ) || SV_ClientLimit() < 2 )
+	{
+		return;
+	}
+
+	gentity_t *ent = SV_GentityNum( 1 );
+	if ( !ent || !ent->client )
+	{
+		return;
+	}
+
+	usercmd_t localCmd = *cmd;
+	localCmd.serverTime = sv.time;
+	svs.clients[1].lastUsercmd = localCmd;
+	ge->ClientThink( 1, &localCmd );
+}
+
 /*
 ==================
 SV_UserMove
@@ -590,4 +609,3 @@ void SV_FreeClient(client_t *client)
 		}
 	}
 }
-

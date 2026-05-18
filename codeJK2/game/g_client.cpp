@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "anims.h"
 #include "g_icarus.h"
 #include "wp_saber.h"
+#include "g_coop.h"
 
 extern void Q3_DebugPrint( int level, const char *format, ... );
 extern void WP_SaberInitBladeData( gentity_t *ent );
@@ -1679,6 +1680,8 @@ qboolean ClientSpawn(gentity_t *ent, SavedGameJustLoaded_e eSavedGameJustLoaded 
 
 		ent->client->ps.batteryCharge = 2500;
 
+		G_Coop_AdjustPeerSpawn( ent, spawn_origin );
+
 		VectorCopy( spawn_origin, client->ps.origin );
 		VectorCopy( spawn_origin, ent->currentOrigin );
 
@@ -1849,5 +1852,4 @@ void ClientDisconnect( int clientNum ) {
 	gi.SetConfigstring( CS_PLAYERS + clientNum, "");
 
 }
-
 

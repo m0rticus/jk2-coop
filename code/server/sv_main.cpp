@@ -146,7 +146,7 @@ void SV_SendServerCommand(client_t *cl, const char *fmt, ...) {
 	}
 
 	// send the data to all relevent clients
-	for (j = 0, client = svs.clients; j < 1 ; j++, client++) {
+	for (j = 0, client = svs.clients; j < SV_ClientLimit() ; j++, client++) {
 		if ( client->state < CS_PRIMED ) {
 			continue;
 		}
@@ -192,7 +192,7 @@ void SVC_Status( netadr_t from ) {
 	status[0] = 0;
 	statusLength = 0;
 
-	for (i=0 ; i < 1 ; i++) {
+	for (i=0 ; i < SV_ClientLimit() ; i++) {
 		cl = &svs.clients[i];
 		if ( cl->state >= CS_CONNECTED ) {
 			if ( cl->gentity && cl->gentity->client ) {
@@ -226,7 +226,7 @@ static void SVC_Info( netadr_t from ) {
 	char	infostring[MAX_INFO_STRING];
 
 	count = 0;
-	for ( i = 0 ; i < 1 ; i++ ) {
+	for ( i = 0 ; i < SV_ClientLimit() ; i++ ) {
 		if ( svs.clients[i].state >= CS_CONNECTED ) {
 			count++;
 		}
@@ -242,7 +242,7 @@ static void SVC_Info( netadr_t from ) {
 	//Info_SetValueForKey( infostring, "hostname", sv_hostname->string );
 	Info_SetValueForKey( infostring, "mapname", sv_mapname->string );
 	Info_SetValueForKey( infostring, "clients", va("%i", count) );
-	Info_SetValueForKey( infostring, "sv_maxclients", va("%i", 1) );
+	Info_SetValueForKey( infostring, "sv_maxclients", va("%i", SV_ClientLimit()) );
 
 	NET_OutOfBandPrint( NS_SERVER, from, "infoResponse\n%s", infostring );
 }
@@ -315,7 +315,7 @@ void SV_PacketEvent( netadr_t from, msg_t *msg ) {
 	qport = MSG_ReadShort( msg ) & 0xffff;
 
 	// find which client the message is from
-	for (i=0, cl=svs.clients ; i < 1 ; i++,cl++) {
+	for (i=0, cl=svs.clients ; i < SV_ClientLimit() ; i++,cl++) {
 		if (cl->state == CS_FREE) {
 			continue;
 		}
@@ -527,4 +527,3 @@ void SV_Frame( int msec,float fractionMsec ) {
 }
 
 //============================================================================
-

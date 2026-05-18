@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "client_ui.h"
+#include "cl_steam.h"
 
 #ifndef _WIN32
 #include <cmath>
@@ -757,6 +758,7 @@ void CL_CreateNewCommands( void ) {
 	cl.cmdNumber++;
 	cmdNum = cl.cmdNumber & CMD_MASK;
 	cl.cmds[cmdNum] = CL_CreateCmd();
+	CL_Steam_SendUsercmd( cl.cmdNumber, &cl.cmds[cmdNum] );
 }
 
 /*
@@ -1036,4 +1038,3 @@ void CL_InitInput( void ) {
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0);
 	cl_debugMove = Cvar_Get ("cl_debugMove", "0", 0);
 }
-
